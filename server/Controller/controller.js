@@ -19,14 +19,14 @@ const postData = async (req, res) => {
       return res.send("Enter missing fields");
     }
 
-    if(!password||!c_password){
-      return res.send("Passowrd mismatch")
+    if (!password || !c_password) {
+      return res.send("Passowrd mismatch");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const checkId = await data.find({ email: email });
-    if (checkId) {
+    if (!checkId) {
       return res.send("Email already available");
     }
     const addData = await data.create({
@@ -35,11 +35,19 @@ const postData = async (req, res) => {
       password: hashedPassword,
       dob,
     });
+    console.log("JWT SECRET =", process.env.JWT_SECRETKEY);
+
 
     //const addData=new data({name,email,password: hashedPassword,dob})
 
+    const token = jwt.sign({ id: addData._id }, process.env.JWT_SECRETKEY, {      expiresIn: "7d"    });
 
-    const token=jwt.sign({id:users._id},process.env.JWT_SECRETKEY,{expiresIn:'7d'})
+    res.cookie("token", token, {
+      htttpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     return res.status(200).send("User created sucessfully");
   } catch (error) {
@@ -65,6 +73,36 @@ const delData = async (req, res) => {
     res.send(`user deleted sucessfully`, del);
   } catch (error) {
     console.log("Error deleting the data", error);
+  }
+};
+
+const userLogin = async (req, res) => {
+  const { email, password } = await req.body;
+
+  if (!email || !password) {
+    return res.json("Enter missing fields");
+  }
+  try {
+    const checkEmail = await data.findOne({ email });
+
+    if (!checkEmail) {
+      return res.send("Email id is not available");
+    }
+
+    const isMatch=await bcrypt.compare(password,checkEmail.password)
+    if(!isMatch){
+      return res.send("Password mismatch")
+    }
+
+    const token=jwt.sign({id:data._id},JWT_SECRETKEY,{expiresIn:"7d"})
+    res.cookie("token",token,{
+      httpOnly:true,
+      secure:process.env.NODE_ENV
+    })
+
+  } 
+  catch (error) {
+    return res.send("Error occured", error);
   }
 };
 
