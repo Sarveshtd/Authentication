@@ -13,6 +13,8 @@ app.use("/data",Route)
 
 const connectDB = async (req, res) => {
   try {
+
+    mongoose.connection.on("Connected to DB",()=>"DB connected")
     await mongoose.connect("mongodb://localhost:27017/Validation");
     console.log(`Connected to DB`);
   } catch (error) {
